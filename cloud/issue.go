@@ -51,6 +51,7 @@ type Issue struct {
 
 // ChangelogItems reflects one single changelog item of a history item
 type ChangelogItems struct {
+	FieldID    string      `json:"fieldId" structs:"fieldId"`
 	Field      string      `json:"field" structs:"field"`
 	FieldType  string      `json:"fieldtype" structs:"fieldtype"`
 	From       interface{} `json:"from" structs:"from"`
