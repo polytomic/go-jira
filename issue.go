@@ -104,9 +104,7 @@ type Epic struct {
 // Every Jira issue has several fields attached.
 type IssueFields struct {
 	// TODO Missing fields
-	//      * "workratio": -1,
 	//      * "lastViewed": null,
-	//      * "environment": null,
 	Expand                        string            `json:"expand,omitempty" structs:"expand,omitempty"`
 	Type                          IssueType         `json:"issuetype,omitempty" structs:"issuetype,omitempty"`
 	Project                       Project           `json:"project,omitempty" structs:"project,omitempty"`
@@ -117,6 +115,7 @@ type IssueFields struct {
 	Created                       Time              `json:"created,omitempty" structs:"created,omitempty"`
 	Duedate                       Date              `json:"duedate,omitempty" structs:"duedate,omitempty"`
 	Watches                       *Watches          `json:"watches,omitempty" structs:"watches,omitempty"`
+	Votes                         *Votes            `json:"votes,omitempty" structs:"votes,omitempty"`
 	Assignee                      *User             `json:"assignee,omitempty" structs:"assignee,omitempty"`
 	Updated                       Time              `json:"updated,omitempty" structs:"updated,omitempty"`
 	Description                   string            `json:"description,omitempty" structs:"description,omitempty"`
@@ -142,9 +141,11 @@ type IssueFields struct {
 	Epic                          *Epic             `json:"epic,omitempty" structs:"epic,omitempty"`
 	Sprint                        *Sprint           `json:"sprint,omitempty" structs:"sprint,omitempty"`
 	Parent                        *Parent           `json:"parent,omitempty" structs:"parent,omitempty"`
+	Security                      *Security         `json:"security,omitempty" structs:"security,omitempty"`
 	AggregateTimeOriginalEstimate int               `json:"aggregatetimeoriginalestimate,omitempty" structs:"aggregatetimeoriginalestimate,omitempty"`
 	AggregateTimeSpent            int               `json:"aggregatetimespent,omitempty" structs:"aggregatetimespent,omitempty"`
 	AggregateTimeEstimate         int               `json:"aggregatetimeestimate,omitempty" structs:"aggregatetimeestimate,omitempty"`
+	WorkRatio                     int               `json:"workratio,omitempty" structs:"workratio,omitempty"`
 	Unknowns                      tcontainer.MarshalMap
 }
 
@@ -250,6 +251,13 @@ type Watches struct {
 	Watchers   []*Watcher `json:"watchers,omitempty" structs:"watchers,omitempty"`
 }
 
+// Watches represents a type of how many and which user are "observing" a Jira issue to track the status / updates.
+type Votes struct {
+	Self     string `json:"self,omitempty" structs:"self,omitempty"`
+	Votes    int    `json:"votes,omitempty" structs:"votes,omitempty"`
+	HasVoted bool   `json:"hasVoted,omitempty" structs:"hasVoted,omitempty"`
+}
+
 // Watcher represents a simplified user that "observes" the issue
 type Watcher struct {
 	Self        string `json:"self,omitempty" structs:"self,omitempty"`
@@ -287,6 +295,10 @@ type Progress struct {
 type Parent struct {
 	ID  string `json:"id,omitempty" structs:"id,omitempty"`
 	Key string `json:"key,omitempty" structs:"key,omitempty"`
+}
+
+type Security struct {
+	ID string `json:"id,omitempty" structs:"id,omitempty"`
 }
 
 // Time represents the Time definition of Jira as a time.Time of go
@@ -614,7 +626,7 @@ type RemoteLinkStatus struct {
 // This can be an issue id, or an issue key.
 // If the issue cannot be found via an exact match, Jira will also look for the issue in a case-insensitive way, or by looking to see if the issue was moved.
 //
-// The given options will be appended to the query string
+// # The given options will be appended to the query string
 //
 // Jira API docs: https://docs.atlassian.com/jira/REST/latest/#api/2/issue-getIssue
 func (s *IssueService) GetWithContext(ctx context.Context, issueID string, options *GetQueryOptions) (*Issue, *Response, error) {
@@ -1296,15 +1308,17 @@ func (s *IssueService) DoTransitionWithPayload(ticketID, payload interface{}) (*
 }
 
 // InitIssueWithMetaAndFields returns Issue with with values from fieldsConfig properly set.
-//  * metaProject should contain metaInformation about the project where the issue should be created.
-//  * metaIssuetype is the MetaInformation about the Issuetype that needs to be created.
-//  * fieldsConfig is a key->value pair where key represents the name of the field as seen in the UI
-//		And value is the string value for that particular key.
+//   - metaProject should contain metaInformation about the project where the issue should be created.
+//   - metaIssuetype is the MetaInformation about the Issuetype that needs to be created.
+//   - fieldsConfig is a key->value pair where key represents the name of the field as seen in the UI
+//     And value is the string value for that particular key.
+//
 // Note: This method doesn't verify that the fieldsConfig is complete with mandatory fields. The fieldsConfig is
-//		 supposed to be already verified with MetaIssueType.CheckCompleteAndAvailable. It will however return
-//		 error if the key is not found.
-//		 All values will be packed into Unknowns. This is much convenient. If the struct fields needs to be
-//		 configured as well, marshalling and unmarshalling will set the proper fields.
+//
+//	supposed to be already verified with MetaIssueType.CheckCompleteAndAvailable. It will however return
+//	error if the key is not found.
+//	All values will be packed into Unknowns. This is much convenient. If the struct fields needs to be
+//	configured as well, marshalling and unmarshalling will set the proper fields.
 func InitIssueWithMetaAndFields(metaProject *MetaProject, metaIssuetype *MetaIssueType, fieldsConfig map[string]string) (*Issue, error) {
 	issue := new(Issue)
 	issueFields := new(IssueFields)
